@@ -20,9 +20,9 @@ services:
       - SERVER_NAME=:80
 #      - FRANKENPHP_CONFIG=worker ./public/frankenphp-worker.php 4
     ports:
-      - "80:80" # HTTP
-      - "443:443" # HTTPS
-      - "443:443/udp" # HTTP/3
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
     networks:
       - laravel-network
     healthcheck:
