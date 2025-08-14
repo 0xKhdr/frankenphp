@@ -2,27 +2,24 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Units\ClearUnitsCacheAction;
+use App\Actions\Units\ListUnitsAction;
 use App\Http\Controllers\Controller;
-use App\Models\Unit;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 
 class UnitController extends Controller
 {
-    protected int $cacheTtl = 3600; // 1 hour
-
-    protected string $cacheKey = 'api:units:list';
+    public function __construct(
+        protected ListUnitsAction $listUnitsAction,
+        protected ClearUnitsCacheAction $clearCacheAction
+    ) {}
 
     /**
      * Get units with caching (default)
      */
     public function index(): JsonResponse
     {
-        $units = Cache::remember($this->cacheKey, $this->cacheTtl, function () {
-            return $this->getUnits();
-        });
-
+        $units = $this->listUnitsAction->handle(useCache: true);
         return $this->jsonResponse($units, true);
     }
 
@@ -31,8 +28,7 @@ class UnitController extends Controller
      */
     public function fresh(): JsonResponse
     {
-        $units = $this->getUnits();
-
+        $units = $this->listUnitsAction->handle(useCache: false);
         return $this->jsonResponse($units, false);
     }
 
@@ -41,20 +37,12 @@ class UnitController extends Controller
      */
     public function clearCache(): JsonResponse
     {
-        $cleared = Cache::forget($this->cacheKey);
-
+        $cleared = $this->clearCacheAction->handle();
+        
         return response()->json([
             'success' => $cleared,
-            'message' => $cleared ? 'Cache cleared successfully' : 'No cache to clear',
+            'message' => $cleared ? 'Cache cleared successfully' : 'No cache to clear'
         ]);
-    }
-
-    /**
-     * Get fresh units from database
-     */
-    protected function getUnits(): Collection
-    {
-        return Unit::all();
     }
 
     /**
@@ -70,7 +58,7 @@ class UnitController extends Controller
                 $isCached ? 'from cache' : 'fresh from database'
             ),
             'total' => count($data),
-            'data' => $data,
+            'data' => $data
         ]);
     }
 }
