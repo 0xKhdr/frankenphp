@@ -17,8 +17,8 @@ services:
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_DATABASE: laravel
-      DB_USERNAME: laravel
+      DB_DATABASE: frankenphp
+      DB_USERNAME: user
       DB_PASSWORD: secret
       SESSION_DRIVER: redis
       CACHE_DRIVER: redis
@@ -29,7 +29,7 @@ services:
       OCTANE_MAX_REQUESTS: 1000
       OCTANE_LOG_LEVEL: info
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/up"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -53,11 +53,11 @@ services:
 #      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: laravel
-      MYSQL_USER: laravel
+      MYSQL_DATABASE: frankenphp
+      MYSQL_USER: user
       MYSQL_PASSWORD: secret
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "laravel", "-psecret"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "user", "-psecret"]
       interval: 10s
       timeout: 5s
       retries: 5

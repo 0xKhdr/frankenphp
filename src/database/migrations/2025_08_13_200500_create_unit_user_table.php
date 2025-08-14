@@ -10,8 +10,13 @@ return new class extends Migration
     {
         Schema::create('unit_user', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('unit_id')->constrained()->cascadeOnDelete();
-            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('unit_id')
+                ->constrained()
+                ->cascadeOnDelete();
+
+            $table->foreignUuid('user_id')
+                ->constrained()
+                ->cascadeOnDelete();
             $table->string('role')->default('member');
             $table->json('permissions')->nullable();
             $table->timestamps();

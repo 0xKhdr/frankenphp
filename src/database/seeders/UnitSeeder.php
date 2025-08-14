@@ -2,8 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Models\Driver;
+use App\Models\Sensor;
 use App\Models\Unit;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UnitSeeder extends Seeder
 {
@@ -194,12 +199,12 @@ class UnitSeeder extends Seeder
                 'unit_group' => 'time',
                 'is_active' => true,
                 'sort_order' => 11,
-            ]
+            ],
         ];
 
         foreach ($units as $unitData) {
             Unit::updateOrCreate(
-                ['id' => $unitData['id']],
+                ['id' => $unitData['id'] ?? (string) Str::uuid()],
                 $unitData
             );
         }
@@ -216,21 +221,17 @@ class UnitSeeder extends Seeder
 
         // Create an admin user
         $admin = User::create([
-            'uuid' => (string) Str::uuid(),
+            'id' => (string) Str::uuid(),
             'name' => 'Admin User',
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
             'status' => 'active',
-            'unit_id' => $testUnit->id,
         ]);
-
-        // Assign admin role to the user
-        $admin->assignRole('admin');
 
         // Update unit with created_by and updated_by
         $testUnit->update([
-            'created_by_uuid' => $admin->uuid,
-            'updated_by_uuid' => $admin->uuid,
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
         ]);
 
         // Create a test driver
@@ -241,8 +242,7 @@ class UnitSeeder extends Seeder
             'email' => 'driver@example.com',
             'phone' => '+1234567890',
             'status' => 'active',
-            'unit_uuid' => $testUnit->id,
-            'user_id' => $admin->uuid,
+            'unit_id' => $testUnit->id,
         ]);
 
         // Create some test sensors
@@ -253,7 +253,7 @@ class UnitSeeder extends Seeder
                 'type' => 'temperature',
                 'model_number' => 'MODEL-TEM-001',
                 'serial_number' => 'TEMP-001',
-                'unit_uuid' => $testUnit->id,
+                'unit_id' => $testUnit->id,
                 'status' => 'active',
                 'last_calibration_date' => now()->subMonths(2),
                 'next_calibration_date' => now()->addMonths(10),
@@ -268,7 +268,7 @@ class UnitSeeder extends Seeder
                 'type' => 'pressure',
                 'model_number' => 'MODEL-PRE-001',
                 'serial_number' => 'PRESS-001',
-                'unit_uuid' => $testUnit->id,
+                'unit_id' => $testUnit->id,
                 'status' => 'active',
                 'last_calibration_date' => now()->subMonths(1),
                 'next_calibration_date' => now()->addMonths(11),
@@ -280,6 +280,10 @@ class UnitSeeder extends Seeder
         ];
 
         foreach ($sensors as $sensorData) {
+            // Ensure specifications is properly encoded as JSON
+            if (isset($sensorData['specifications']) && is_array($sensorData['specifications'])) {
+                $sensorData['specifications'] = json_encode($sensorData['specifications']);
+            }
             Sensor::create($sensorData);
         }
     }

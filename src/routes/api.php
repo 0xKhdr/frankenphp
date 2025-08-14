@@ -14,4 +14,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// Get units with caching (default)
 Route::get('/units', [UnitController::class, 'index']);
+
+// Get fresh units (bypass cache)
+Route::get('/units/fresh', [UnitController::class, 'fresh']);
+
+// Clear units cache (protected)
+Route::post('/units/clear-cache', [UnitController::class, 'clearCache'])->middleware('auth:api');

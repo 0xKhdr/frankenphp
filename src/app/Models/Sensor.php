@@ -9,15 +9,12 @@ class Sensor extends BaseModel
 {
     use SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'name',
         'type',
         'model_number',
         'serial_number',
-        'unit_uuid',
+        'unit_id',
         'specifications',
         'last_calibration_date',
         'next_calibration_date',
@@ -25,9 +22,6 @@ class Sensor extends BaseModel
         'metadata',
     ];
 
-    /**
-     * The attributes that should be cast.
-     */
     protected $casts = [
         'last_calibration_date' => 'datetime',
         'next_calibration_date' => 'datetime',
@@ -40,6 +34,6 @@ class Sensor extends BaseModel
      */
     public function unit(): BelongsTo
     {
-        return $this->belongsTo(Unit::class, 'unit_uuid', 'id');
+        return $this->belongsTo(Unit::class);
     }
 }

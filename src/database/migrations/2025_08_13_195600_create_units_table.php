@@ -29,8 +29,15 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // For any additional data
 
             // Relations
-            $table->foreignUuid('created_by')->nullable()->constrained('users', 'id');
-            $table->foreignUuid('updated_by')->nullable()->constrained('users', 'id');
+            $table->foreignUuid('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->onDelete('set null');
+
+            $table->foreignUuid('updated_by')
+                ->nullable()
+                ->constrained('users')
+                ->onDelete('set null');
 
             $table->timestamps();
             $table->softDeletes();

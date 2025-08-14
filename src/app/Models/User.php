@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasUuidAndMetadata;
+    use HasFactory, HasUuidAndMetadata, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -63,7 +63,7 @@ class User extends Authenticatable
      */
     public function accessibleUnits(): BelongsToMany
     {
-        return $this->belongsToMany(Unit::class, 'unit_user', 'user_uuid', 'unit_uuid', 'uuid', 'id')
+        return $this->belongsToMany(Unit::class, 'unit_user')
             ->withPivot(['role', 'permissions'])
             ->withTimestamps();
     }
@@ -73,6 +73,6 @@ class User extends Authenticatable
      */
     public function driver()
     {
-        return $this->hasOne(Driver::class, 'user_id', 'uuid');
+        return $this->hasOne(Driver::class, 'user_id', 'id');
     }
 }
