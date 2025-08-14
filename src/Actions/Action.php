@@ -13,7 +13,7 @@ abstract class Action
         return $this->handle();
     }
 
-    protected function success($data, string $message = null, int $status = 200): JsonResponse
+    protected function success($data, ?string $message = null, int $status = 200): JsonResponse
     {
         return response()->json([
             'success' => true,
@@ -22,7 +22,7 @@ abstract class Action
         ], $status);
     }
 
-    protected function error(string $message, int $status = 400, array $errors = null): JsonResponse
+    protected function error(string $message, int $status = 400, ?array $errors = null): JsonResponse
     {
         return response()->json([
             'success' => false,

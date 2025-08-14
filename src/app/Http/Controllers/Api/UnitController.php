@@ -20,6 +20,7 @@ class UnitController extends Controller
     public function index(): JsonResponse
     {
         $units = $this->listUnitsAction->handle(useCache: true);
+
         return $this->jsonResponse($units, true);
     }
 
@@ -29,6 +30,7 @@ class UnitController extends Controller
     public function fresh(): JsonResponse
     {
         $units = $this->listUnitsAction->handle(useCache: false);
+
         return $this->jsonResponse($units, false);
     }
 
@@ -38,10 +40,10 @@ class UnitController extends Controller
     public function clearCache(): JsonResponse
     {
         $cleared = $this->clearCacheAction->handle();
-        
+
         return response()->json([
             'success' => $cleared,
-            'message' => $cleared ? 'Cache cleared successfully' : 'No cache to clear'
+            'message' => $cleared ? 'Cache cleared successfully' : 'No cache to clear',
         ]);
     }
 
@@ -58,7 +60,7 @@ class UnitController extends Controller
                 $isCached ? 'from cache' : 'fresh from database'
             ),
             'total' => count($data),
-            'data' => $data
+            'data' => $data,
         ]);
     }
 }

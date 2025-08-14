@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 class ListUnitsAction extends Action
 {
     protected int $cacheTtl = 3600; // 1 hour
+
     protected string $cacheKey = 'api:units:list';
 
     public function handle(bool $useCache = true)
@@ -18,7 +19,7 @@ class ListUnitsAction extends Action
         }
 
         $units = Unit::all();
-        
+
         if ($useCache) {
             Cache::put($this->cacheKey, $units, $this->cacheTtl);
         }
