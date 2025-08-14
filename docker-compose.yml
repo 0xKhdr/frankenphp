@@ -7,7 +7,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./src:/var/www/html:delegated
+      - ./src:/app:delegated
       - ./.docker/frankenphp/php.ini:/usr/local/etc/php/99-custom.ini:ro
     depends_on:
       - mysql

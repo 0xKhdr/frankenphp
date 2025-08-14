@@ -1,118 +1,75 @@
-# Use a pinned FrankenPHP Alpine image
+# Use the official FrankenPHP image with PHP 8.3 Alpine
 FROM dunglas/frankenphp:1.3-php8.3-alpine
 
-ARG UID=1000
-ARG GID=1000
-ARG WORKER_COUNT=4
-
-ENV COMPOSER_ALLOW_SUPERUSER=0
-
-# Install runtime dependencies
+# Install system dependencies
 RUN set -eux; \
     apk add --no-cache \
         curl \
         git \
-        icu-data-full \
-        icu-libs \
-        libpng \
-        libjpeg-turbo \
-        freetype \
-        libzip \
-        oniguruma \
-        tini \
-        shadow \
-        su-exec \
-        mysql-client
-
-# Install build dependencies
-RUN set -eux; \
-    apk add --no-cache --virtual .build-deps \
-        ${PHPIZE_DEPS} \
-        build-base \
-        autoconf \
-        linux-headers \
-        freetype-dev \
-        libjpeg-turbo-dev \
-        libpng-dev \
+        unzip \
         libzip-dev \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
+        libwebp-dev \
         icu-dev \
+        libsodium \
+        libsodium-dev \
+        libxml2-dev \
         oniguruma-dev \
-        openssl-dev
+        postgresql-dev \
+        sqlite-dev \
+        linux-headers \
+        tini \
+    ;
 
-# Install PHP core extensions (non-PECL)
-RUN set -eux; \
-    docker-php-ext-configure gd --with-freetype --with-jpeg; \
-    docker-php-ext-install -j$(nproc) \
+# Install and configure PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) \
+        bcmath \
         exif \
         gd \
         intl \
-        mbstring \
-        pcntl \
         pdo_mysql \
-        bcmath \
-        zip
-
-# Install PECL extensions
-RUN set -eux; \
-    pecl install \
-        redis; \
-    docker-php-ext-enable redis
-
-# Clean up build dependencies and caches
-RUN set -eux; \
-    apk del .build-deps; \
-    rm -rf /tmp/* /var/cache/apk/*
-
-# Create application user/group
-RUN set -eux; \
-    addgroup -g ${GID} -S app-group; \
-    adduser -u ${UID} -S app-user -G app-group -H -s /bin/false; \
-    mkdir -p /var/www/html; \
-    chown -R app-user:app-group /var/www/html; \
-    chmod 750 /var/www/html
+        pdo_pgsql \
+        pdo_sqlite \
+        sodium \
+        zip \
+        opcache \
+        pcntl \
+    ;
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer; \
-    chown app-user:app-group /usr/local/bin/composer; \
-    chmod +x /usr/local/bin/composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Switch to app-user
-USER app-user
-WORKDIR /var/www/html
+# Set working directory
+WORKDIR /app
 
-# Copy Composer files for caching
-COPY --chown=app-user:app-group ./src/composer.* ./
+# Copy existing application directory contents
+COPY src/ /app/
 
-# Install dependencies
-RUN composer install \
-    --optimize-autoloader \
-    --no-interaction \
-    --prefer-dist \
-    --no-scripts \
-    --classmap-authoritative
+# Set permissions and create necessary directories
+RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache && \
+    chmod -R 775 /app/storage /app/bootstrap/cache && \
+    mkdir -p /app/storage/framework/{sessions,views,cache}
+    # Install dependencies (keep dev for now)
+#    composer install --optimize-autoloader --no-interaction --no-progress
 
-# Copy application code
-COPY --chown=app-user:app-group ./src ./
+# Copy custom PHP configuration
+COPY .docker/frankenphp/php.ini /usr/local/etc/php/conf.d/99-custom.ini
 
-# Copy PHP config (as root, so switch temporarily)
-USER root
-COPY --chown=root:root ./.docker/frankenphp/php.ini /usr/local/etc/php/conf.d/99-custom.ini
-USER app-user
+# Copy Caddy configuration
+#COPY .docker/frankenphp/Caddyfile /etc/caddy/Caddyfile
 
-# Optimize Laravel
-RUN composer run-script post-install-cmd && \
-    php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache && \
-    php artisan event:cache
+# Expose port 80 for FrankenPHP
+EXPOSE 80
 
-# Use tini as entrypoint
+# Health check
+#HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+#    CMD curl -f http://localhost/health || exit 1
+
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# Start FrankenPHP
-CMD ["frankenphp", "run", \
-     "--host=0.0.0.0", \
-     "--port=80", \
-     "--workers=${WORKER_COUNT}", \
-     "--max-requests=10000", \
-     "--log-level=info"]
+# Start command for FrankenPHP
+#CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]
+CMD ["frankenphp", "php-cli", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=4", "--max-requests=1000", "--watch", "--log-level"]

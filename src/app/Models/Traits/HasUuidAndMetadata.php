@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 /**
  * Trait HasUuidAndMetadata
- * 
+ *
  * Provides common functionality for models including:
  * - UUID as primary key
  * - Metadata field support
@@ -17,41 +17,9 @@ trait HasUuidAndMetadata
     use HasUuids;
 
     /**
-     * The data type of the auto-incrementing ID.
-     */
-    protected $keyType = 'string';
-
-    /**
-     * Indicates if the model's ID is auto-incrementing.
-     */
-    public $incrementing = false;
-
-    /**
-     * The attributes that should be cast.
-     */
-    protected $casts = [
-        'metadata' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
-    ];
-
-    /**
-     * The attributes that should be hidden for arrays.
-     */
-    protected $hidden = [
-        'deleted_at',
-    ];
-
-    /**
-     * The accessors to append to the model's array form.
-     */
-    protected $appends = [];
-
-    /**
      * Boot the trait.
      */
-    protected static function bootHasUuidAndMetadata()
+    protected static function bootHasUuidAndMetadata(): void
     {
         static::creating(function ($model) {
             // Ensure metadata is always an array
@@ -75,6 +43,29 @@ trait HasUuidAndMetadata
     public function getKeyType(): string
     {
         return 'string';
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getCasts(): array
+    {
+        return [
+            'metadata' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'deleted_at' => 'datetime',
+        ];
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getHidden(): array
+    {
+        return [
+            'deleted_at',
+        ];
     }
 
     /**
