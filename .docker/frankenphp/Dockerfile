@@ -58,6 +58,9 @@ RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache && \
 # Copy custom PHP configuration
 COPY .docker/frankenphp/php.ini /usr/local/etc/php/conf.d/99-custom.ini
 
+# Copy Caddy configuration
+#COPY .docker/frankenphp/Caddyfile /etc/caddy/Caddyfile
+
 # Expose port 80 for FrankenPHP
 EXPOSE 80
 
