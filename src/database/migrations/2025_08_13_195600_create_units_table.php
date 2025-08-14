@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('symbol')->nullable();
             $table->text('description')->nullable();
-            
+
             // Additional columns
             $table->string('type'); // e.g., 'length', 'weight', 'volume', etc.
             $table->string('si_unit')->nullable(); // Base SI unit if applicable
@@ -27,11 +27,11 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->integer('sort_order')->default(0);
             $table->json('metadata')->nullable(); // For any additional data
-            
+
             // Relations
-            $table->foreignUuid('created_by')->nullable()->constrained('users', 'uuid');
-            $table->foreignUuid('updated_by')->nullable()->constrained('users', 'uuid');
-            
+            $table->foreignUuid('created_by')->nullable()->constrained('users', 'id');
+            $table->foreignUuid('updated_by')->nullable()->constrained('users', 'id');
+
             $table->timestamps();
             $table->softDeletes();
         });

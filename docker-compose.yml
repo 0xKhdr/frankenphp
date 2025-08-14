@@ -8,10 +8,12 @@ services:
       - "80:80"
     volumes:
       - ./src:/app:delegated
-      - ./.docker/frankenphp/php.ini:/usr/local/etc/php/99-custom.ini:ro
+      - ./.docker/frankenphp/php.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
@@ -21,6 +23,17 @@ services:
       SESSION_DRIVER: redis
       CACHE_DRIVER: redis
       REDIS_HOST: redis
+      REDIS_PASSWORD: ""
+      REDIS_PORT: 6379
+      OCTANE_WORKERS: 4
+      OCTANE_MAX_REQUESTS: 1000
+      OCTANE_LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   mysql:
     container_name: mysql
@@ -37,20 +50,40 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+#      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: laravel
       MYSQL_USER: laravel
       MYSQL_PASSWORD: secret
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "laravel", "-psecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     container_name: redis
     image: redis:7.2-alpine
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly no --save ""
+    command: >
+      redis-server 
+      --maxmemory 256mb 
+      --maxmemory-policy allkeys-lru 
+      --appendonly yes 
+      --appendfsync everysec
+      --save ""
     sysctls:
       net.core.somaxconn: 1024
     volumes:
       - redis-data:/data
+#      - ./.docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
 volumes:
   mysql-data:
