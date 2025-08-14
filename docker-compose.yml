@@ -1,58 +1,57 @@
 services:
   app:
+    container_name: app
     build:
       context: .
       dockerfile: .docker/frankenphp/Dockerfile
-    container_name: frankenphp-app
-    volumes:
-      - ./src:/app
-      - ./src/vendor:/app/vendor
-    environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - APP_URL=http://localhost:8000
-      - DB_CONNECTION=mysql
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_DATABASE=laravel
-      - DB_USERNAME=laravel
-      - DB_PASSWORD=secret
-      - SERVER_NAME=:80
-#      - FRANKENPHP_CONFIG=worker ./public/frankenphp-worker.php 4
     ports:
       - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    networks:
-      - laravel-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
-
-  db:
-    image: mysql:8.0
-    container_name: frankenphp-laravel-db
-    environment:
-      MYSQL_DATABASE: laravel
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_PASSWORD: secret
-      MYSQL_USER: laravel
-      SERVICE_TAGS: dev
-      SERVICE_NAME: mysql
     volumes:
-      - dbdata:/var/lib/mysql
-    networks:
-      - laravel-network
+      - ./src:/app:delegated
+      - ./.docker/frankenphp/php.ini:/usr/local/etc/php/99-custom.ini:ro
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
+      SESSION_DRIVER: redis
+      CACHE_DRIVER: redis
+      REDIS_HOST: redis
+
+  mysql:
+    container_name: mysql
+    image: mysql:8.0
+    command: >
+      mysqld
+      --default-authentication-plugin=mysql_native_password
+      --innodb_buffer_pool_size=512M
+      --innodb_log_file_size=256M
+      --innodb_flush_log_at_trx_commit=2
+      --innodb_flush_method=O_DIRECT
+      --skip-name-resolve
     ports:
       - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
 
-networks:
-  laravel-network:
-    driver: bridge
+  redis:
+    container_name: redis
+    image: redis:7.2-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly no --save ""
+    sysctls:
+      net.core.somaxconn: 1024
+    volumes:
+      - redis-data:/data
 
 volumes:
-  dbdata:
-    driver: local
+  mysql-data:
+  redis-data:
