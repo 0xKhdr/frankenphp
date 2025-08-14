@@ -17,6 +17,9 @@ class UnitsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->records(function () {
+                return [];
+            })
             ->columns([
                 TextColumn::make('id')
                     ->label('ID')
