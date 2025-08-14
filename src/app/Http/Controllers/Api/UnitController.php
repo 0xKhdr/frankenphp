@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Cache;
 class UnitController extends Controller
 {
     protected int $cacheTtl = 3600; // 1 hour
+
     protected string $cacheKey = 'api:units:list';
 
     /**
@@ -31,6 +32,7 @@ class UnitController extends Controller
     public function fresh(): JsonResponse
     {
         $units = $this->getUnits();
+
         return $this->jsonResponse($units, false);
     }
 
@@ -43,7 +45,7 @@ class UnitController extends Controller
 
         return response()->json([
             'success' => $cleared,
-            'message' => $cleared ? 'Cache cleared successfully' : 'No cache to clear'
+            'message' => $cleared ? 'Cache cleared successfully' : 'No cache to clear',
         ]);
     }
 
@@ -68,7 +70,7 @@ class UnitController extends Controller
                 $isCached ? 'from cache' : 'fresh from database'
             ),
             'total' => count($data),
-            'data' => $data
+            'data' => $data,
         ]);
     }
 }
