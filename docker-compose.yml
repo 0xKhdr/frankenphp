@@ -4,6 +4,14 @@ services:
     build:
       context: .
       dockerfile: .docker/frankenphp/Dockerfile
+    command: >
+      frankenphp php-cli
+      artisan octane:frankenphp
+      --host=0.0.0.0
+      --port=80
+      --workers=auto
+      --max-requests=1000
+      --watch
     ports:
       - "80:80"
     volumes:
@@ -13,14 +21,20 @@ services:
       - mysql
       - redis
     environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_KEY: ${APP_KEY:-your-app-key}
       DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: laravel
-      DB_USERNAME: laravel
-      DB_PASSWORD: secret
-      SESSION_DRIVER: redis
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-frankenphp}
+      DB_USERNAME: ${DB_USERNAME:-user}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
       CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
       REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PORT: 6379
 
   mysql:
     container_name: mysql
@@ -33,6 +47,12 @@ services:
       --innodb_flush_log_at_trx_commit=2
       --innodb_flush_method=O_DIRECT
       --skip-name-resolve
+      --innodb_buffer_pool_instances=2
+      --innodb_log_buffer_size=64M
+      --innodb_thread_concurrency=0
+      --slow_query_log=1
+      --slow_query_log_file=/var/log/mysql/slow.log
+      --long_query_time=2
     ports:
       - "3306:3306"
     volumes:
@@ -46,9 +66,16 @@ services:
   redis:
     container_name: redis
     image: redis:7.2-alpine
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly no --save ""
-    sysctls:
-      net.core.somaxconn: 1024
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly no
+      --save ""
+      --tcp-keepalive 60
+      --timeout 300
+    ports:
+      - "6379:6379"
     volumes:
       - redis-data:/data
 
