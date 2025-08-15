@@ -19,7 +19,7 @@ RUN apk add --no-cache \
     git \
     unzip \
     tini \
-    # Image processing libraries
+     # Image processing libraries
     libzip-dev \
     libpng-dev \
     libjpeg-turbo-dev \
