@@ -7,7 +7,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./src:/app:delegated
+      - ./src:/var/www/html:delegated
       - ./.docker/frankenphp/php.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
     depends_on:
       mysql:
@@ -15,25 +15,34 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # Laravel environment
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_KEY: ${APP_KEY:-your-app-key}
+      # Database configuration
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_DATABASE: frankenphp
-      DB_USERNAME: user
-      DB_PASSWORD: secret
+      DB_DATABASE: ${DB_DATABASE:-frankenphp}
+      DB_USERNAME: ${DB_USERNAME:-user}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      # Redis configuration
       SESSION_DRIVER: redis
       CACHE_DRIVER: redis
       REDIS_HOST: redis
-      REDIS_PASSWORD: ""
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_PORT: 6379
-      OCTANE_WORKERS: 4
-      OCTANE_MAX_REQUESTS: 1000
-      OCTANE_LOG_LEVEL: info
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/up"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
+      # Octane configuration
+      OCTANE_WORKERS: ${OCTANE_WORKERS:-4}
+      OCTANE_MAX_REQUESTS: ${OCTANE_MAX_REQUESTS:-1000}
+      OCTANE_LOG_LEVEL: ${OCTANE_LOG_LEVEL:-info}
+      # Performance tuning
+#      OPCACHE_PRELOAD: /var/www/html/bootstrap/cache/opcache-preload.php
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost/up" ,"||", "exit", "1"]
+#      interval: 30s
+#      timeout: 3s
+#      retries: 3
+#      start_period: 40s
 
   mysql:
     container_name: mysql
@@ -46,18 +55,25 @@ services:
       --innodb_flush_log_at_trx_commit=2
       --innodb_flush_method=O_DIRECT
       --skip-name-resolve
+      --innodb_buffer_pool_instances=2
+      --innodb_log_buffer_size=64M
+      --innodb_thread_concurrency=0
+      --slow_query_log=1
+      --slow_query_log_file=/var/log/mysql/slow.log
+      --long_query_time=2
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-#      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - mysql-logs:/var/log/mysql
+      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: frankenphp
-      MYSQL_USER: user
-      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${DB_DATABASE:-frankenphp}
+      MYSQL_USER: ${DB_USERNAME:-user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "user", "-psecret"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME:-user}", "-p${DB_PASSWORD:-secret}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -73,11 +89,13 @@ services:
       --appendonly yes 
       --appendfsync everysec
       --save ""
+      --tcp-keepalive 60
+      --timeout 300
     sysctls:
       net.core.somaxconn: 1024
     volumes:
       - redis-data:/data
-#      - ./.docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./.docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -87,4 +105,5 @@ services:
 
 volumes:
   mysql-data:
+  mysql-logs:
   redis-data:

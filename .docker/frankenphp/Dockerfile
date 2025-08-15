@@ -80,10 +80,10 @@ RUN mkdir -p /app/storage/framework/{sessions,views,cache} \
 # Copy custom PHP configuration
 COPY .docker/frankenphp/php.ini /usr/local/etc/php/conf.d/99-custom.ini
 
-# Install PHP dependencies (uncomment when ready)
+# Install PHP dependencies (add --no-dev in production)
 # RUN composer install --optimize-autoloader --no-interaction --no-progress
 
-# Copy Caddy configuration (if using traditional FrankenPHP server)
+# Copy Caddy configuration (optional)
 # COPY .docker/frankenphp/Caddyfile /etc/caddy/Caddyfile
 
 # Expose HTTP port
@@ -93,8 +93,8 @@ EXPOSE 80
 ENTRYPOINT ["/sbin/tini", "--"]
 
 # Health check endpoint
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost/up || exit 1
+#HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+#    CMD curl -f http://localhost/up || exit 1
 
 # Start Laravel Octane with FrankenPHP
 CMD [ \
@@ -106,6 +106,3 @@ CMD [ \
     "--max-requests=1000", \
     "--watch" \
 ]
-
-# Alternative: Traditional FrankenPHP server mode
-# CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]

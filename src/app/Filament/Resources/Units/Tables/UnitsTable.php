@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Units\Tables;
 
+use App\Actions\Units\ListUnitsAction;
+use App\Models\Unit;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -11,15 +13,14 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 
 class UnitsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            ->records(function () {
-                return [];
-            })
+            ->query(Unit::query())
             ->columns([
                 TextColumn::make('id')
                     ->label('ID')
