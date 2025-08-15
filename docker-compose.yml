@@ -4,11 +4,19 @@ services:
     build:
       context: .
       dockerfile: .docker/frankenphp/Dockerfile
+    command: >
+      frankenphp php-cli
+      artisan octane:frankenphp
+      --host=0.0.0.0
+      --port=80
+      --workers=auto
+      --max-requests=1000
+      --watch
     ports:
       - "80:80"
     volumes:
       - ./src:/var/www/html:delegated
-      - ./.docker/frankenphp/php.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
+#      - ./.docker/frankenphp/php.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -31,14 +39,8 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_PORT: 6379
-      # Octane configuration
-      OCTANE_WORKERS: ${OCTANE_WORKERS:-4}
-      OCTANE_MAX_REQUESTS: ${OCTANE_MAX_REQUESTS:-1000}
-      OCTANE_LOG_LEVEL: ${OCTANE_LOG_LEVEL:-info}
-      # Performance tuning
-#      OPCACHE_PRELOAD: /var/www/html/bootstrap/cache/opcache-preload.php
 #    healthcheck:
-#      test: ["CMD", "curl", "-f", "http://localhost/up" ,"||", "exit", "1"]
+#      test: ["CMD", "curl", "-f", "http://localhost" ,"||", "exit", "1"]
 #      interval: 30s
 #      timeout: 3s
 #      retries: 3
@@ -46,7 +48,6 @@ services:
 
   mysql:
     container_name: mysql
-    image: mysql:8.0
     command: >
       mysqld
       --default-authentication-plugin=mysql_native_password
@@ -61,12 +62,13 @@ services:
       --slow_query_log=1
       --slow_query_log_file=/var/log/mysql/slow.log
       --long_query_time=2
+    image: mysql:8.0
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - mysql-logs:/var/log/mysql
-      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+#      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
       MYSQL_DATABASE: ${DB_DATABASE:-frankenphp}
@@ -83,19 +85,12 @@ services:
     container_name: redis
     image: redis:7.2-alpine
     command: >
-      redis-server 
-      --maxmemory 256mb 
-      --maxmemory-policy allkeys-lru 
-      --appendonly yes 
-      --appendfsync everysec
-      --save ""
-      --tcp-keepalive 60
-      --timeout 300
-    sysctls:
-      net.core.somaxconn: 1024
+      redis-server /usr/local/etc/redis/redis.conf
     volumes:
       - redis-data:/data
       - ./.docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    sysctls:
+      net.core.somaxconn: 1024
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

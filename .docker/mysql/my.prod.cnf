@@ -8,6 +8,11 @@ innodb_flush_log_at_trx_commit = 2
 innodb_flush_method = O_DIRECT
 sync_binlog = 0
 
+# Query cache (useful for development)
+query_cache_type = 1
+query_cache_size = 64M
+query_cache_limit = 2M
+
 # Connection settings
 max_connections = 200
 max_connect_errors = 10000

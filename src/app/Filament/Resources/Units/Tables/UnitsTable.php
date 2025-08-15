@@ -21,6 +21,7 @@ class UnitsTable
     {
         return $table
             ->query(Unit::query())
+            ->records()
             ->columns([
                 TextColumn::make('id')
                     ->label('ID')
