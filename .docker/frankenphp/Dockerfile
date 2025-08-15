@@ -123,7 +123,7 @@ CMD [ \
     "artisan", "octane:frankenphp", \
     "--host=0.0.0.0", \
     "--port=80", \
-    "--workers=auto", \
+    "--workers=4", \
     "--max-requests=1000", \
     "--watch" \
 ]
