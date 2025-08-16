@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Units\Tables;
 
-use App\Actions\Units\ListUnitsAction;
 use App\Models\Unit;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -13,7 +12,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Collection;
 
 class UnitsTable
 {

@@ -5,8 +5,8 @@ namespace App\Actions\Units;
 use App\Actions\AbstractAction;
 use App\Models\Unit;
 use Exception;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class ListUnitsAction extends AbstractAction
 {
@@ -38,6 +38,7 @@ class ListUnitsAction extends AbstractAction
 
     /**
      * Get fresh units directly from database (bypassing cache)
+     *
      * @throws Exception
      */
     public function fresh(): Collection
