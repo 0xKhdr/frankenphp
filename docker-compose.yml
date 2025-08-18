@@ -33,7 +33,6 @@ services:
       APP_KEY: ${APP_KEY:-base64:32}
       LOG_LEVEL: warning
       LOG_CHANNEL: single
-      
       # Database
       DB_CONNECTION: mysql
       DB_HOST: mysql
@@ -41,13 +40,11 @@ services:
       DB_DATABASE: ${DB_DATABASE:-laravel}
       DB_USERNAME: ${DB_USERNAME:-user}
       DB_PASSWORD: ${DB_PASSWORD:-secret}
-      
       # Cache
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
       BROADCAST_DRIVER: redis
-      
       # Redis
       REDIS_CLIENT: phpredis
       REDIS_HOST: redis
@@ -57,18 +54,12 @@ services:
       REDIS_CACHE_DB: 2
       REDIS_SESSION_DB: 1
       REDIS_QUEUE_DB: 3
-      
       # Octane
       OCTANE_SERVER: frankenphp
       OCTANE_WORKERS: 6
       OCTANE_TASK_WORKERS: 3
       OCTANE_MAX_REQUESTS: 10000
       OCTANE_WATCH: false
-      
-      # Performance optimizations
-      VIEW_CACHE_PATH: /tmp/views
-      TELESCOPE_ENABLED: false
-      DEBUGBAR_ENABLED: false
     deploy:
       resources:
         limits:
