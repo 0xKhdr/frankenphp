@@ -1,61 +1,68 @@
-/app # cat /etc/caddy/Caddyfile
-# The Caddyfile is an easy way to configure FrankenPHP and the Caddy web server.
-#
-# https://frankenphp.dev/docs/config
-# https://caddyserver.com/docs/caddyfile
-
 {
-        skip_install_trust
+    # Enable full-duplex for SSE, WebSockets, etc.
+    servers {
+        enable_full_duplex
+    }
 
-        {$CADDY_GLOBAL_OPTIONS}
+    # Global FrankenPHP config
+    frankenphp {
+        # Auto-scale threads (2x CPU by default)
+        num_threads {$FRANKENPHP_NUM_THREADS:auto}
+        max_threads {$FRANKENPHP_MAX_THREADS:auto}
 
-        frankenphp {
-                {$FRANKENPHP_CONFIG}
+        # Timeout if no thread available
+        max_wait_time 10s
+
+        # Worker config
+        worker {
+            file public/worker.php
+            num {$OCTANE_WORKERS:6}
+            name laravel-worker
+            # Watch only in dev: watch /app
+            env APP_ENV {$APP_ENV}
+            env APP_DEBUG {$APP_DEBUG}
+            env LOG_LEVEL {$LOG_LEVEL}
         }
+
+        # Override PHP settings (override php.ini)
+        php_ini memory_limit 2G
+        php_ini max_execution_time 30
+        php_ini opcache.validate_timestamps 0
+        php_ini opcache.jit_buffer_size 512M
+    }
+
+    # Inject global options via env
+    {$CADDY_GLOBAL_OPTIONS}
 }
 
-{$CADDY_EXTRA_CONFIG}
-
+# Main site
 {$SERVER_NAME:localhost} {
-        #log {
-        #       # Redact the authorization query parameter that can be set by Mercure
-        #       format filter {
-        #               request>uri query {
-        #                       replace authorization REDACTED
-        #               }
-        #       }
-        #}
+    root * {$SERVER_ROOT:public}
 
-        root {$SERVER_ROOT:public/}
-        encode zstd br gzip
+    # Compression
+    encode zstd br gzip
 
-        # Uncomment the following lines to enable Mercure and Vulcain modules
-        #mercure {
-        #       # Transport to use (default to Bolt)
-        #       transport_url {$MERCURE_TRANSPORT_URL:bolt:///data/mercure.db}
-        #       # Publisher JWT key
-        #       publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY} {env.MERCURE_PUBLISHER_JWT_ALG}
-        #       # Subscriber JWT key
-        #       subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY} {env.MERCURE_SUBSCRIBER_JWT_ALG}
-        #       # Allow anonymous subscribers (double-check that it's what you want)
-        #       anonymous
-        #       # Enable the subscription API (double-check that it's what you want)
-        #       subscriptions
-        #       # Extra directives
-        #       {$MERCURE_EXTRA_DIRECTIVES}
-        #}
-        #vulcain
+    # PHP server with worker routing
+    php_server {
+        root public
+        split_path .php
 
-        {$CADDY_SERVER_EXTRA_DIRECTIVES}
-
-        php_server {
-                #worker /path/to/your/worker.php
+        # Route non-static to Laravel
+        @laravel {
+            not path ^/assets/* ^/css/* ^/js/* ^/images/* ^/favicon.ico ^/robots.txt
+            not file
         }
+        rewrite @laravel /index.php
+
+        # Optional: dedicated worker for /api
+        # worker {
+        #     file public/worker.php
+        #     match /api/*
+        #     num 4
+        #     env OCTANE_WORKER_GROUP api
+        # }
+    }
+
+    # Serve static files
+    file_server
 }
-
-# As an alternative to editing the above site block, you can add your own site
-# block files in the Caddyfile.d directory, and they will be included as long
-# as they use the .caddyfile extension.
-
-import Caddyfile.d/*.caddyfile
-/app #

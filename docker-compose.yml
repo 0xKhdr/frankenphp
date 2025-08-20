@@ -5,34 +5,37 @@ services:
       context: .
       dockerfile: .docker/frankenphp/Dockerfile
       target: production
-    command: >
-      frankenphp php-cli
-      artisan octane:frankenphp
-      --host=0.0.0.0
-      --port=80
-      --workers=6
-      --max-requests=10000
     ports:
       - "80:80"
     tmpfs:
-      - /tmp/opcache:size=1G
-      - /app/bootstrap/cache:size=512M
-      - /tmp/views:size=256M
-    volumes:
-      - ./src:/app:delegated
-      - ./.docker/frankenphp/php.ini:/usr/local/etc/php/99-custom.ini:ro
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - /tmp/opcache:size=1G,uid=1000,gid=1000,mode=1777
+      - /app/bootstrap/cache:size=512M,uid=1000,gid=1000,mode=1777
     environment:
-      # Application
-      APP_ENV: production
-      APP_DEBUG: false
-      APP_KEY: ${APP_KEY:-base64:32}
-      LOG_LEVEL: warning
-      LOG_CHANNEL: single
+      # FrankenPHP & Caddy
+      SERVER_NAME: :80
+      SERVER_ROOT: public/
+      CADDY_GLOBAL_OPTIONS: servers { enable_full_duplex }
+      FRANKENPHP_CONFIG: |
+        worker {
+          file public/frankenphp-worker.php
+          num ${OCTANE_WORKERS:-6}
+          env APP_ENV ${APP_ENV}
+          env APP_DEBUG ${APP_DEBUG}
+          env LOG_LEVEL ${LOG_LEVEL:-warning}
+        }
+        num_threads ${FRANKENPHP_NUM_THREADS:-8}
+        max_wait_time 10s
+        php_ini memory_limit 2G
+        php_ini opcache.jit_buffer_size 512M
+        php_ini opcache.validate_timestamps 0
+        php_ini session.save_handler redis
+        php_ini session.save_path "tcp://redis:6379?prefix=session_&timeout=1.5"
+
+      # Laravel
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
+
       # Database
       DB_CONNECTION: mysql
       DB_HOST: mysql
@@ -40,42 +43,35 @@ services:
       DB_DATABASE: ${DB_DATABASE:-laravel}
       DB_USERNAME: ${DB_USERNAME:-user}
       DB_PASSWORD: ${DB_PASSWORD:-secret}
-      # Cache
+
+      # Redis
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
       BROADCAST_DRIVER: redis
-      # Redis
       REDIS_CLIENT: phpredis
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: null
-      REDIS_DB: 0
-      REDIS_CACHE_DB: 2
-      REDIS_SESSION_DB: 1
-      REDIS_QUEUE_DB: 3
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-null}
+
       # Octane
       OCTANE_SERVER: frankenphp
-      OCTANE_WORKERS: 6
-      OCTANE_TASK_WORKERS: 3
-      OCTANE_MAX_REQUESTS: 10000
-      OCTANE_WATCH: false
-    deploy:
-      resources:
-        limits:
-          cpus: '4.0'
-          memory: 4G
-        reservations:
-          cpus: '2.0'
-          memory: 2G
+      OCTANE_WORKERS: ${OCTANE_WORKERS:-6}
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "-s", "-o", "/dev/null", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 15s
       timeout: 5s
       retries: 2
       start_period: 30s
     networks:
       - app-network
+    restart: unless-stopped
 
   mysql:
     container_name: mysql
@@ -86,53 +82,16 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --innodb_buffer_pool_size=2G
-      --innodb_redo_log_capacity=1G
-      --innodb_flush_log_at_trx_commit=2
-      --innodb_flush_method=O_DIRECT
-      --skip-name-resolve
-      --innodb_buffer_pool_instances=8
-      --innodb_log_buffer_size=256M
-      --innodb_thread_concurrency=0
       --max_connections=1000
-      --innodb_file_per_table=1
-      --innodb_adaptive_hash_index=1
-      --innodb_read_io_threads=16
-      --innodb_write_io_threads=16
-      --innodb_io_capacity=2000
-      --innodb_io_capacity_max=4000
-      --innodb_lru_scan_depth=2048
-      --table_open_cache=8192
-      --table_open_cache_instances=16
-      --thread_cache_size=100
-      --tmp_table_size=512M
-      --max_heap_table_size=512M
-      --key_buffer_size=64M
-      --read_buffer_size=2M
-      --read_rnd_buffer_size=8M
-      --sort_buffer_size=4M
-      --join_buffer_size=4M
-      --binlog_cache_size=2M
-      --slow_query_log=0
-    ports:
-      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - mysql-logs:/var/log/mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
       MYSQL_DATABASE: ${DB_DATABASE:-laravel}
       MYSQL_USER: ${DB_USERNAME:-user}
       MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-      MYSQL_INNODB_BUFFER_POOL_SIZE: 2G
-      MYSQL_INNODB_REDO_LOG_CAPACITY: 1G
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 4G
-        reservations:
-          cpus: '1.0'
-          memory: 2G
+    ports:
+      - "3306:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootpass}"]
       interval: 30s
@@ -145,63 +104,23 @@ services:
   redis:
     container_name: redis
     image: redis:7.2-alpine
-    command: >
-      redis-server
-      --maxmemory 1gb
-      --maxmemory-policy allkeys-lru
-      --maxmemory-samples 10
-      --appendonly yes
-      --appendfsync everysec
-      --no-appendfsync-on-rewrite yes
-      --auto-aof-rewrite-percentage 100
-      --auto-aof-rewrite-min-size 64mb
-      --tcp-keepalive 60
-      --timeout 300
-      --databases 16
-      --maxclients 2000
-      --tcp-backlog 511
-      --hash-max-ziplist-entries 512
-      --hash-max-ziplist-value 64
-      --list-max-ziplist-size -2
-      --set-max-intset-entries 512
-      --zset-max-ziplist-entries 128
-      --zset-max-ziplist-value 64
-      --hll-sparse-max-bytes 3000
-      --stream-node-max-bytes 4096
-      --lazyfree-lazy-eviction yes
-      --lazyfree-lazy-expire yes
-      --lazyfree-lazy-server-del yes
-    ports:
-      - "6379:6379"
+    command: redis-server --maxmemory 1gb --maxmemory-policy allkeys-lru --appendonly yes
     volumes:
       - redis-data:/data
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
+    ports:
+      - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
-    driver_opts:
-      com.docker.network.driver.mtu: 1500
 
 volumes:
   mysql-data:
-    driver: local
-  mysql-logs:
-    driver: local
   redis-data:
-    driver: local
